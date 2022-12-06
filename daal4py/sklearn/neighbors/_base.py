@@ -332,8 +332,15 @@ class NeighborsBase(BaseNeighborsBase):
                 self.classes_ = []
                 self._y = np.empty(y.shape, dtype=int)
                 for k in range(self._y.shape[1]):
-                    classes, self._y[:, k] = np.unique(
-                        y[:, k], return_inverse=True)
+                    # Add condition to skip convert all-type label to number
+                    if np.issubdtype(y[:, k].dtype.type, np.number):
+                        print("number type", y[:, k].dtype.type)
+                        classes = np.unique(y[:, k])
+                        self._y[:, k] = y[:, k].astype(np.int64)
+                    else:
+                        classes, self._y[:, k] = np.unique(
+                            y[:, k], return_inverse=True)
+
                     self.classes_.append(classes)
 
                 if not self.outputs_2d_:

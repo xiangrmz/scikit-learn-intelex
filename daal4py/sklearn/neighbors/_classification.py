@@ -83,8 +83,12 @@ def daal4py_classifier_predict(estimator, X, base_predict):
             estimator, estimator.algorithm, estimator.n_samples_fit_, n_features)
         predict_alg = prediction_algorithm(method, fptype, params)
         prediction_result = predict_alg.compute(X, daal_model)
-        result = estimator.classes_.take(
-            np.asarray(prediction_result.prediction.ravel(), dtype=np.intp))
+        
+        if np.issubdtype(estimator.classes_.dtype.type, np.number):
+            result = np.asarray(prediction_result.prediction.ravel(), dtype=np.intp)
+        else:
+            result = estimator.classes_.take(
+                np.asarray(prediction_result.prediction.ravel(), dtype=np.intp))
     else:
         result = base_predict(estimator, X)
 
