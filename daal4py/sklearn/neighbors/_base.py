@@ -91,6 +91,14 @@ def daal4py_fit(estimator, X, fptype):
     estimator._fit_method = estimator.algorithm
     estimator.effective_metric_ = 'euclidean'
     estimator._tree = None
+    method = parse_auto_method(
+        estimator, estimator.algorithm,
+        estimator.n_samples_fit_, estimator.n_features_in_)
+    # print("out data type", np.isfortran(X), method)
+    if isinstance(X, np.ndarray) and not np.isfortran(X) and method =='kd_tree':
+        # print("converting data", np.isfortran(X), method)
+        X = np.asfortranarray(X, float)
+    estimator._fit_X = X
     weights = getattr(estimator, 'weights', 'uniform')
 
     params = {
@@ -109,9 +117,6 @@ def daal4py_fit(estimator, X, fptype):
     else:
         labels = estimator._y.reshape(-1, 1)
 
-    method = parse_auto_method(
-        estimator, estimator.algorithm,
-        estimator.n_samples_fit_, estimator.n_features_in_)
     estimator._fit_method = method
     train_alg = training_algorithm(method, fptype, params)
     estimator._daal_model = train_alg.compute(X, labels).model
@@ -329,8 +334,19 @@ class NeighborsBase(BaseNeighborsBase):
                 self.classes_ = []
                 self._y = np.empty(y.shape, dtype=int)
                 for k in range(self._y.shape[1]):
-                    classes, self._y[:, k] = np.unique(
-                        y[:, k], return_inverse=True)
+
+                    if np.issubdtype(y[:, k].dtype.type, np.number) and self.algorithm == "kdtree":
+
+                        classes_list = np.unique(y[:, k])
+                        self._y[:, k] = y[:, k].astype(np.int64)
+                        
+                        classes = np.empty(classes_list)
+                        classes.fill(-1)
+                        for clas in classes_list:
+                            classes[classes_list] = classes_list
+                    else:
+                        classes, self._y[:, k] = np.unique(
+                            y[:, k], return_inverse=True)
                     self.classes_.append(classes)
 
                 if not self.outputs_2d_:
